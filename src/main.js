@@ -1,17 +1,17 @@
 const Apify = require('apify');
 
-const trimFields = (item, fieldsToShow) => {
-    if (!fieldsToShow) {
+const trimFields = (item, identificationFields) => {
+    if (identificationFields.length === 0) {
         return item;
     }
-    return fieldsToShow.reduce((newItem, field) => {
+    return identificationFields.reduce((newItem, field) => {
         newItem[field] = item[field];
         return newItem;
     }, {});
 };
 
-const getOutputItem = (item, badFields, index) => {
-    const trimmedItem = trimFields(item);
+const getOutputItem = (item, badFields, identificationFields, index) => {
+    const trimmedItem = trimFields(item, identificationFields);
     const updatedItem = badFields.reduce((updItem, field) => {
         updItem[field] = item[field];
         return updItem;
@@ -19,7 +19,7 @@ const getOutputItem = (item, badFields, index) => {
     return { ...updatedItem, badFields, DEBUG_itemIndex: index };
 };
 
-async function loadResults({ checker, datasetId, callback, batchSize, limit, badItems, badFields }, offset) {
+async function loadResults({ checker, datasetId, callback, batchSize, limit, badItems, badFields, identificationFields }, offset) {
     const newItems = await Apify.client.datasets.getItems({
         datasetId,
         offset,
@@ -29,12 +29,12 @@ async function loadResults({ checker, datasetId, callback, batchSize, limit, bad
     console.log(`loaded ${newItems.length} items`);
 
     if (newItems.length === 0) return;
-    callback(checker, newItems, badItems, badFields);
+    callback(checker, newItems, badItems, badFields, identificationFields);
     await Apify.setValue('STATE', { offset, badItems, badFields });
     await loadResults({ datasetId, callback, batchSize, limit, badItems, badFields }, offset + batchSize);
 }
 
-const iterationFn = (checker, items, badItems, badFields) => {
+const iterationFn = (checker, items, badItems, badFields, identificationFields) => {
     items.forEach((item, index) => {
         const itemBadFields = [];
         Object.keys(checker).forEach((key) => {
@@ -55,7 +55,7 @@ const iterationFn = (checker, items, badItems, badFields) => {
             }
         });
         if (itemBadFields.length > 0) {
-            badItems.push(getOutputItem(item, itemBadFields, index));
+            badItems.push(getOutputItem(item, itemBadFields, identificationFields, index));
         }
     });
 };
@@ -65,7 +65,7 @@ Apify.main(async () => {
     console.log('input');
     console.dir(input);
 
-    const { apifyStorageId, recordKey, rawData, functionalChecker, limit, offset = 0, batchSize = 50000 } = input;
+    const { apifyStorageId, recordKey, rawData, functionalChecker, identificationFields = [], limit, offset = 0, batchSize = 50000 } = input;
 
     if (!apifyStorageId && !rawData) {
         throw new Error('Input should contain at least one of: "apifyStorageId" or "rawData"!');
@@ -73,10 +73,16 @@ Apify.main(async () => {
     if (apifyStorageId && rawData) {
         throw new Error('Input cannot contain both of: "apifyStorageId" or "rawData"!');
     }
-    if (typeof checkFunctions !== 'object') {
+    let checker;
+    try {
+        checker = eval(functionalChecker)();
+    } catch (e) {
+        throw new Error('Creating checker object from "functionalChecker" failed, please nilcude valid javascript! Error:', e);
+    }
+    if (typeof checker !== 'object') {
         throw new Error('Input has to contain "checkFunctions" object!');
     }
-    Object.entries(functionalChecker).forEach(([key, value]) => {
+    Object.entries(checker).forEach(([key, value]) => {
         if (typeof value !== 'function') {
             throw new Error(`checkFunctions.${key} should be a function! Please correct the input!`);
         }
@@ -112,14 +118,17 @@ Apify.main(async () => {
 
 
     if (rawData || kvStoreData) {
-        iterationFn(functionalChecker, rawData || kvStoreData, badItems, badFields);
+        iterationFn(checker, rawData || kvStoreData, badItems, badFields, identificationFields);
     } else if (datasetInfo) {
         await loadResults({
-            checker: functionalChecker,
+            checker,
             datasetId: apifyStorageId,
             callback: iterationFn,
             batchSize,
             limit,
+            badItems,
+            badFields,
+            identificationFields,
         },
         state ? state.offset : offset);
     }
@@ -127,5 +136,5 @@ Apify.main(async () => {
     console.log(`number of bad items: ${badItems.length}`);
     console.dir(badFields);
 
-    await Apify.setValue('OUTPUT', { totalItemCount, badFields, badItems });
+    await Apify.setValue('OUTPUT', { totalItemCount, badItemCount: badItems.length, badFields, badItems });
 });

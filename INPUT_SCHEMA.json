@@ -29,6 +29,13 @@
             "editor": "javascript",
             "prefill": "() => ({\n    myField: (field, item) => true\n})"
         },
+        "identificationFields":{
+            "title": "Identification Fields",
+            "type": "array",
+            "description": "You can specify which fields should display in the debug OUTPUT to identify bad items. By default it shows all fields which may make it unnecessary big.",
+            "editor": "json",
+            "example": ["url"]
+        },
         "limit":{
             "title": "Limit",
             "type": "integer",
@@ -44,9 +51,9 @@
             "unit": "items"
         },
         "bachSize":{
-            "title": "Max concurrency",
+            "title": "Batch Size",
             "type": "integer",
-            "description": "You can specify how many maximum parallel downloading/uploading requests will be running. Keep in mind that the limit is here to not overload the host server.",
+            "description": "You can change number of loaded and processed items in each batch. This is only needed if you have really huge items.",
             "default": 50000,
             "unit": "items"
         }

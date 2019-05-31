@@ -23,7 +23,7 @@
             "type": "array",
             "description": "Raw JSON array you want to check.",
             "editor": "json",
-            "example": "[{\"url\": \"https://example.com\",\"price\": 20},{\"url\": \"https://google.com\",\"price\": 30}]"
+            "example": [{"url": "https://example.com","price": 20},{"url": "https://google.com","price": 30}]
         },
         "functionalChecker": {
             "title": "Functional Checker",

@@ -1,8 +1,8 @@
 {
-    "title": "Spreadsheet import input",
+    "title": "Results checker input",
     "type": "object",
     "schemaVersion": 1,
-    "required": ["inputId"],
+    "required": ["functionalChecker"],
     "properties": {
         "apifyStorageId": {
             "title": "Apify Storage ID",
@@ -24,28 +24,31 @@
         },
         "functionalChecker": {
             "title": "Functional Checker",
-            "type": "object",
-            "description": "Objects with item fields as keys and values as predicates (functions that return true/false)",
+            "type": "string",
+            "description": "Function that returns an object with item fields as keys and values as predicates (functions that return true/false)",
             "editor": "javascript",
-            "prefill": "{\n    myField: (field, item) => true\n}"
+            "prefill": "() => ({\n    myField: (field, item) => true\n})"
         },
         "limit":{
             "title": "Limit",
             "type": "integer",
             "description": "How many items will be checked. Default is all",
-            "minimum": 1
+            "minimum": 1,
+            "unit": "items"
         },
         "offset":{
             "title": "Offset",
             "type": "integer",
             "description": "From which item the checking will start. Use with limit to check specific items.",
-            "minimum": 1
+            "minimum": 1,
+            "unit": "items"
         },
         "bachSize":{
             "title": "Max concurrency",
             "type": "integer",
             "description": "You can specify how many maximum parallel downloading/uploading requests will be running. Keep in mind that the limit is here to not overload the host server.",
-            "default": 50000
+            "default": 50000,
+            "unit": "items"
         }
     }
 }

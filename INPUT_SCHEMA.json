@@ -1,0 +1,51 @@
+{
+    "title": "Spreadsheet import input",
+    "type": "object",
+    "schemaVersion": 1,
+    "required": ["inputId"],
+    "properties": {
+        "apifyStorageId": {
+            "title": "Apify Storage ID",
+            "type": "string",
+            "description": "Id of dataset or key value store where the data are located.",
+            "editor": "textfield"
+        },
+        "recordKey": {
+            "title": "Record Key",
+            "type": "string",
+            "description": "Only specify if Apify storage id points to a key value store! This is the record key under which the data are.",
+            "editor": "textfield"
+        },
+        "rawData": {
+            "title": "Raw Data",
+            "type": "array",
+            "description": "Raw JSON array you want to check.",
+            "editor": "json"
+        },
+        "functionalChecker": {
+            "title": "Functional Checker",
+            "type": "object",
+            "description": "Objects with item fields as keys and values as predicates (functions that return true/false)",
+            "editor": "javascript",
+            "prefill": "{\n    myField: (field, item) => true\n}"
+        },
+        "limit":{
+            "title": "Limit",
+            "type": "integer",
+            "description": "How many items will be checked. Default is all",
+            "minimum": 1
+        },
+        "offset":{
+            "title": "Offset",
+            "type": "integer",
+            "description": "From which item the checking will start. Use with limit to check specific items.",
+            "minimum": 1
+        },
+        "bachSize":{
+            "title": "Max concurrency",
+            "type": "integer",
+            "description": "You can specify how many maximum parallel downloading/uploading requests will be running. Keep in mind that the limit is here to not overload the host server.",
+            "default": 50000
+        }
+    }
+}

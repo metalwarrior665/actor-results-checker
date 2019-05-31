@@ -8,54 +8,62 @@
             "title": "Apify Storage ID",
             "type": "string",
             "description": "Id of dataset or key value store where the data are located.",
-            "editor": "textfield"
+            "editor": "textfield",
+            "example": "s5NJ77qFv8b4osiGR"
         },
         "recordKey": {
             "title": "Record Key",
             "type": "string",
             "description": "Only specify if Apify storage id points to a key value store! This is the record key under which the data are.",
-            "editor": "textfield"
+            "editor": "textfield",
+            "example": "MY-KEY"
         },
         "rawData": {
             "title": "Raw Data",
             "type": "array",
             "description": "Raw JSON array you want to check.",
-            "editor": "json"
+            "editor": "json",
+            "example": "[{\"url\": \"https://example.com\",\"price\": 20},{\"url\": \"https://google.com\",\"price\": 30}]"
         },
         "functionalChecker": {
             "title": "Functional Checker",
             "type": "string",
             "description": "Function that returns an object with item fields as keys and values as predicates (functions that return true/false)",
             "editor": "javascript",
-            "prefill": "() => ({\n    myField: (field, item) => true\n})"
+            "prefill": "() => ({\n    url: (url, item) => typeof url === 'string' && url.startsWith('http'),\n    myField: (field, item) => true\n})",
+            "example": "() => ({\n    url: (url, item) => typeof url === 'string' && url.includes('http'),\n    title: (title) => typeof title === 'string' && title.length >= 3,\n    itemId: (itemId) => typeof itemId === 'string' && itemId.length >= 4,\n    source: (source) => typeof source === 'string',\n    status: (status) => status === 'REMOVED',\n});"
         },
         "identificationFields":{
             "title": "Identification Fields",
             "type": "array",
             "description": "You can specify which fields should display in the debug OUTPUT to identify bad items. By default it shows all fields which may make it unnecessary big.",
             "editor": "json",
-            "example": ["url"]
+            "example": ["url", "color"]
         },
         "limit":{
             "title": "Limit",
             "type": "integer",
             "description": "How many items will be checked. Default is all",
             "minimum": 1,
-            "unit": "items"
+            "unit": "items",
+            "example": 1000
         },
         "offset":{
             "title": "Offset",
             "type": "integer",
             "description": "From which item the checking will start. Use with limit to check specific items.",
             "minimum": 1,
-            "unit": "items"
+            "unit": "items",
+            "example": 20000
         },
         "bachSize":{
             "title": "Batch Size",
             "type": "integer",
             "description": "You can change number of loaded and processed items in each batch. This is only needed if you have really huge items.",
             "default": 50000,
-            "unit": "items"
+            "minimum": 1,
+            "unit": "items",
+            "example": 5000
         }
     }
 }

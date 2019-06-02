@@ -65,7 +65,7 @@
             "unit": "items",
             "example": 5000
         },
-        "coyMode":{
+        "copyMode":{
             "title": "copy mode (for debug only)",
             "type": "boolean",
             "description": "Check if we can remove memory leak."

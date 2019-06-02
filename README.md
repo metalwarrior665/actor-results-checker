@@ -27,9 +27,12 @@ Results Checker is an [Apify actor](https://apify.com/actors) that helps you fin
 - In the end, the report from all batches is merged together and saved as `OUTPUT` to the default Key Value store.
 
 ### Usage
-- Requires very little memory. 128 MB for a small dataset. Add more for increased speed. Maximum effective memory is usually about 4 GB since the checker can use just one CPU core.
-- *add examples of runtime costs*
+- For smaller datasets you can use 128 MB memory but if it fails with an 137 error code (out of memory), you will need to increase it. Add more memory for increased speed. Maximum effective memory is usually about 4 GB since the checker can use just one CPU core.
 - If the report would be too big to be saved or opened, just run a few smaller runs of this actor using `limit` and `offset` parameters.
+
+#### Compute units (CU) consumption examples
+- 10000 items (complex check) - 0.005 CU (few seconds)
+- 100000 items (complext check) - 0.05 (one minute, computation is instant but loading items take time)
 
 ### Input
 This actor expects a JSON object as an input. You can also set it up in a visual UI on Apify. You can find examples in the Input and Example Run tabs of the actor page in Apify Store.

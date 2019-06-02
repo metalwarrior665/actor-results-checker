@@ -1,4 +1,7 @@
 const Apify = require('apify');
+const deepcopy = require('deepcopy');
+
+let COPY_MODE;
 
 const trimFields = (item, identificationFields) => {
     if (identificationFields.length === 0) {
@@ -21,18 +24,17 @@ const getOutputItem = (item, badFields, identificationFields, index) => {
 
 async function loadResults(options, offset) {
     const { checker, datasetId, callback, batchSize, limit, badItems, badFields, identificationFields } = options;
-    console.log(`loading setup: batchSize: ${batchSize}, limit left: ${limit - offset} total limit: ${limit}, offset: ${offset}`)
-    const realLimit = limit - offset < batchSize + offset ? limit - offset : batchSize;
-    console.log(`Loading next batch of ${realLimit} items`);
+    console.log(`loading setup: batchSize: ${batchSize}, limit left: ${limit - offset} total limit: ${limit}, offset: ${offset}`);
+    const currentLimit = limit < batchSize + offset ? limit - offset : batchSize;
+    console.log(`Loading next batch of ${currentLimit} items`);
     const newItems = await Apify.client.datasets.getItems({
         datasetId,
         offset,
-        limit: realLimit,
+        limit: currentLimit,
     }).then((res) => res.items);
 
     console.log(`loaded ${newItems.length} items`);
 
-    // if (newItems.length === 0) return;
     callback(checker, newItems, badItems, badFields, identificationFields);
     if (offset + batchSize >= limit) {
         console.log('All items loaded');
@@ -64,7 +66,8 @@ const iterationFn = (checker, items, badItems, badFields, identificationFields) 
                 }
             });
             if (itemBadFields.length > 0) {
-                badItems.push(getOutputItem(item, itemBadFields, identificationFields, index));
+                const debugItem = getOutputItem(item, itemBadFields, identificationFields, index);
+                badItems.push(COPY_MODE ? deepcopy(debugItem) : debugItem);
             }
         } catch (e) {
             console.log('Checker failed on item, please check your javascript:');
@@ -79,7 +82,19 @@ Apify.main(async () => {
     console.log('input');
     console.dir(input);
 
-    const { apifyStorageId, recordKey, rawData, functionalChecker, identificationFields = [], limit, offset = 0, batchSize = 50000 } = input;
+    const {
+        apifyStorageId,
+        recordKey,
+        rawData,
+        functionalChecker,
+        identificationFields = [],
+        limit,
+        offset = 0,
+        batchSize = 50000,
+        copyMode = false,
+    } = input;
+
+    COPY_MODE = copyMode;
 
     if (!apifyStorageId && !rawData) {
         throw new Error('Input should contain at least one of: "apifyStorageId" or "rawData"!');

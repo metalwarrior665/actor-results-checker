@@ -19,43 +19,57 @@ const getOutputItem = (item, badFields, identificationFields, index) => {
     return { ...updatedItem, badFields, DEBUG_itemIndex: index };
 };
 
-async function loadResults({ checker, datasetId, callback, batchSize, limit, badItems, badFields, identificationFields }, offset) {
+async function loadResults(options, offset) {
+    const { checker, datasetId, callback, batchSize, limit, badItems, badFields, identificationFields } = options;
+    console.log(`loading setup: batchSize: ${batchSize}, limit left: ${limit - offset} total limit: ${limit}, offset: ${offset}`)
+    const realLimit = limit - offset < batchSize + offset ? limit - offset : batchSize;
+    console.log(`Loading next batch of ${realLimit} items`);
     const newItems = await Apify.client.datasets.getItems({
         datasetId,
         offset,
-        limit: batchSize,
+        limit: realLimit,
     }).then((res) => res.items);
 
     console.log(`loaded ${newItems.length} items`);
 
-    if (newItems.length === 0) return;
+    // if (newItems.length === 0) return;
     callback(checker, newItems, badItems, badFields, identificationFields);
+    if (offset + batchSize >= limit) {
+        console.log('All items loaded');
+        return;
+    }
     await Apify.setValue('STATE', { offset, badItems, badFields });
-    await loadResults({ datasetId, callback, batchSize, limit, badItems, badFields }, offset + batchSize);
+    await loadResults(options, offset + batchSize);
 }
 
 const iterationFn = (checker, items, badItems, badFields, identificationFields) => {
     items.forEach((item, index) => {
-        const itemBadFields = [];
-        Object.keys(checker).forEach((key) => {
-            const fn = checker[key];
-            const isGood = fn(item[key], item);
-            if (!isGood) {
-                itemBadFields.push(key);
-                if (!badFields[key]) badFields[key] = 0;
-                badFields[key]++;
+        try {
+            const itemBadFields = [];
+            Object.keys(checker).forEach((key) => {
+                const fn = checker[key];
+                const isGood = fn(item[key], item);
+                if (!isGood) {
+                    itemBadFields.push(key);
+                    if (!badFields[key]) badFields[key] = 0;
+                    badFields[key]++;
+                }
+            });
+            Object.keys(item).forEach((key) => {
+                const allowedKeys = Object.keys(checker);
+                if (!allowedKeys.includes(key)) {
+                    itemBadFields.push(key);
+                    if (!badFields[key]) badFields[key] = 0;
+                    badFields[key]++;
+                }
+            });
+            if (itemBadFields.length > 0) {
+                badItems.push(getOutputItem(item, itemBadFields, identificationFields, index));
             }
-        });
-        Object.keys(item).forEach((key) => {
-            const allowedKeys = Object.keys(checker);
-            if (!allowedKeys.includes(key)) {
-                itemBadFields.push(key);
-                if (!badFields[key]) badFields[key] = 0;
-                badFields[key]++;
-            }
-        });
-        if (itemBadFields.length > 0) {
-            badItems.push(getOutputItem(item, itemBadFields, identificationFields, index));
+        } catch (e) {
+            console.log('Checker failed on item, please check your javascript:');
+            console.dir(item);
+            throw new Error('Checker failed with error:', e);
         }
     });
 };
@@ -100,9 +114,14 @@ Apify.main(async () => {
             .catch(() => console.log('Dataset with "apifyStorageId" was not found, we will try kvStore'));
         if (datasetInfo) {
             totalItemCount = datasetInfo.itemCount;
+            console.log('Total items in dataset:', totalItemCount);
         } else {
-            kvStoreData = await Apify.client.keyValueStores.getDataset({ storeId: apifyStorageId, key: recordKey }).then((res) => res.body)
-                .catch(() => console.log('Key-value store with "apifyStorageId" and "recordKey" was not found, please input correct storage ids'));
+            if (!recordKey) {
+                throw new Error('Cannot try to load from KV store without a "recordKey" input parameter');
+            }
+            kvStoreData = await Apify.client.keyValueStores.getRecord({ storeId: apifyStorageId, key: recordKey })
+                .then((res) => res.body)
+                .catch(() => { throw new Error(`Key-value store with "apifyStorageId": "${apifyStorageId}" and "recordKey": "${recordKey}" was not found, please input correct storage ids`); });
             if (!Array.isArray(kvStoreData)) {
                 throw new Error('Data loaded from key value store must be an array!');
             }

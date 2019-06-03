@@ -31,7 +31,7 @@
             "description": "Function that returns an object with item fields as keys and values as predicates (functions that return true/false)",
             "editor": "javascript",
             "prefill": "() => ({\n    url: (url, item) => typeof url === 'string' && url.startsWith('http') && url.length > 10,\n    myField: (field, item) => true // this means an optional fields (always passes)\n})",
-            "example": "() => ({\n    url: (url, item) => typeof url === 'string' && url.includes('http'),\n    title: (title) => typeof title === 'string' && title.length >= 3,\n    itemId: (itemId) => typeof itemId === 'string' && itemId.length >= 4,\n    source: (source) => typeof source === 'string',\n    status: (status) => status === 'REMOVED',\n});"
+            "example": "() => ({\n    url: (url, item) => typeof url === 'string' && url.startsWith('http'),\n    title: (title) => typeof title === 'string' && title.length >= 3,\n    itemId: (itemId) => typeof itemId === 'string' && itemId.length >= 4,\n    source: (source) => typeof source === 'string',\n    status: (status) => status === 'REMOVED',\n});"
         },
         "identificationFields":{
             "title": "Identification Fields",

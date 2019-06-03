@@ -30,9 +30,10 @@ Results Checker is an [Apify actor](https://apify.com/actors) that helps you fin
 - For smaller datasets you can use 128 MB memory but if it fails with an 137 error code (out of memory), you will need to increase it. Add more memory for increased speed. Maximum effective memory is usually about 4 GB since the checker can use just one CPU core.
 - If the report would be too big to be saved or opened, just run a few smaller runs of this actor using `limit` and `offset` parameters.
 
-#### Compute units (CU) consumption examples
-- 10000 items (complex check) - 0.005 CU (few seconds)
-- 100000 items (complext check) - 0.05 (one minute, computation is instant but loading items take time)
+#### Compute units (CU) consumption examples (complex check & large items)
+- 10,000 items - 0.005 CU (few seconds)
+- 100,000 items - 0.05 (one minute, computation is instant but loading items take time)
+- 1,000,000 items - 2 CU (requires up to 16 GB memory to hold data, better to split into smaller runs - this may get fixed in future version)
 
 ### Input
 This actor expects a JSON object as an input. You can also set it up in a visual UI on Apify. You can find examples in the Input and Example Run tabs of the actor page in Apify Store.
@@ -91,7 +92,7 @@ Checks more fields.
     mapped_category: (mapped_category) => typeof mapped_category === 'string' && mapped_category !== 'other',
     composition: (composition) => Array.isArray(composition),
     long_description: (long_description) => typeof long_description === 'string' || long_description === null,
-    images: (images) => Array.isArray(images) && images.length > 0 && typeof images[0] === 'string' && images[0].includes('http'),
+    images: (images) => Array.isArray(images) && typeof images[0] === 'string' && images[0].includes('http'),
     stock_total: (stock_total) => typeof stock_total === 'number',
     variants: (variants) => Array.isArray(variants), // This is not that important now to do deeper check
     color: () => true,
@@ -108,6 +109,8 @@ sale_price: (sale_price, item) => (typeof sale_price === 'number' || sale_price 
 ```
 - If the predicate always returns `true`, it means this field can have any value, even `undefined` so it can be absent and still pass too.
 
+**Important:** You should always define your predicates in a way that cannot crash. For example `(images) => images[0].includes('http')` has ways to crash. The correct definition is `(images) => Array.isArray(images) && typeof images[0] === 'string' && images[0].includes('http')`. An error occuring in the predicate will crash the whole actor because the check cannot be valid any more. If it happens, the problematic item will be logged so you can correct the check.
+
 ### JSON Schema Checker
 
 *To be added in the next version*
@@ -116,14 +119,15 @@ sale_price: (sale_price, item) => (typeof sale_price === 'number' || sale_price 
 At the end of the actor run, the report is saved to the default Key Value store as an `OUTPUT`. 
 
 It contains:
-- `totalItemCount` and `badItemCount`
+- `totalItemCount`, `badItemCount`, `identificationFields`
 - `badFields` array that shows how many times each field was bad. This way you instantly see your problematic spots.
-- `badItems` array of all bad items. They are displayed whole or just with `identificationFields` to shorten the length. Also for each bad item, you will see exactly the bad fields (that didn't match the predicate or were extra) and `DEBUG_itemIndex` to locate your item in the dataset.
+- `badItems` array of all bad items. The `data` diplay their content whole or just with `identificationFields` plus bad fields to shorten the length. Also for each bad item, you will see exactly the `badFields` (that didn't match the predicate or were extra) and `itemIndex` to locate your item in the dataset.
 
 ```
 {
   "totalItemCount": 41117,
   "badItemCount": 63,
+  "identificationFields: ["url"],
   "badFields": {
     "sku": 63,
     "price": 63,
@@ -134,14 +138,16 @@ It contains:
   },
   "badItems": [
     {
-      "url": "https://en-ae.namshi.com/buy-trendyol-puff-sleeve-sheer-detail-dress-cd1088znaa8k.html"
+      "data": {
+        "url": "https://en-ae.namshi.com/buy-trendyol-puff-sleeve-sheer-detail-dress-cd1088znaa8k.html"
+      },
       "badFields": [
         "sku",
         "price",
         "status",
         "images"
       ],
-      "DEBUG_itemIndex": 4
+      "itemIndex": 4
     },
     ... // other items here
   ]

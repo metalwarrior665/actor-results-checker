@@ -1,7 +1,7 @@
 const Apify = require('apify');
-const deepcopy = require('deepcopy');
+// const deepcopy = require('deepcopy');
 
-let COPY_MODE;
+// let COPY_MODE;
 
 const trimFields = (item, identificationFields) => {
     if (identificationFields.length === 0) {
@@ -19,7 +19,7 @@ const getOutputItem = (item, badFields, identificationFields, index) => {
         updItem[field] = item[field];
         return updItem;
     }, trimmedItem);
-    return { ...updatedItem, badFields, DEBUG_itemIndex: index };
+    return { data: updatedItem, badFields, itemIndex: index };
 };
 
 async function loadResults(options, offset) {
@@ -44,7 +44,7 @@ async function loadResults(options, offset) {
     await loadResults(options, offset + batchSize);
 }
 
-const iterationFn = (checker, items, badItems, badFields, identificationFields) => {
+const iterationFn = (checker, items, badItems, badFields, identificationFields, offset = 0) => {
     items.forEach((item, index) => {
         try {
             const itemBadFields = [];
@@ -66,8 +66,8 @@ const iterationFn = (checker, items, badItems, badFields, identificationFields) 
                 }
             });
             if (itemBadFields.length > 0) {
-                const debugItem = getOutputItem(item, itemBadFields, identificationFields, index);
-                badItems.push(COPY_MODE ? deepcopy(debugItem) : debugItem);
+                const debugItem = getOutputItem(item, itemBadFields, identificationFields, index + offset);
+                badItems.push(debugItem); // COPY_MODE ? deepcopy(debugItem) : debugItem
             }
         } catch (e) {
             console.log('Checker failed on item, please check your javascript:');
@@ -91,10 +91,10 @@ Apify.main(async () => {
         limit,
         offset = 0,
         batchSize = 50000,
-        copyMode = false,
+        // copyMode = false,
     } = input;
 
-    COPY_MODE = copyMode;
+    // COPY_MODE = copyMode;
 
     if (!apifyStorageId && !rawData) {
         throw new Error('Input should contain at least one of: "apifyStorageId" or "rawData"!');
@@ -170,5 +170,5 @@ Apify.main(async () => {
     console.log(`number of bad items: ${badItems.length}`);
     console.dir(badFields);
 
-    await Apify.setValue('OUTPUT', { totalItemCount, badItemCount: badItems.length, badFields, badItems });
+    await Apify.setValue('OUTPUT', { totalItemCount, badItemCount: badItems.length, identificationFields, badFields, badItems });
 });

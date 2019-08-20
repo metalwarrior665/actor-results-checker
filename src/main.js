@@ -38,6 +38,7 @@ async function loadAndProcessResults(options, offset) {
         console.log(`loaded ${newItems.length} items`);
 
         checkerFn(checker, newItems, badItems, badFields, identificationFields);
+        console.dir({ badItemCount: badItems.length, badFields });
         if (offset + batchSize >= limit || newItems.length === 0) {
             console.log('All items loaded');
             return;

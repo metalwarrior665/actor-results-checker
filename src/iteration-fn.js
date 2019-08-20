@@ -1,7 +1,6 @@
 const { getOutputItem } = require('./utils.js');
 
 module.exports = ({ checker, items, badItems, badFields, identificationFields, noExtraFields }, offset = 0) => {
-    console.log('noExtraFields:', noExtraFields);
     items.forEach((item, index) => {
         try {
             const itemBadFields = [];

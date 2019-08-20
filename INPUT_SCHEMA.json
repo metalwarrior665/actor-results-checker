@@ -56,7 +56,7 @@
             "unit": "items",
             "example": 20000
         },
-        "bachSize":{
+        "batchSize":{
             "title": "Batch Size",
             "type": "integer",
             "description": "You can change number of loaded and processed items in each batch. This is only needed if you have really huge items.",

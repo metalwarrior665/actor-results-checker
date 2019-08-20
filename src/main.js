@@ -22,26 +22,30 @@ const getOutputItem = (item, badFields, identificationFields, index) => {
     return { data: updatedItem, badFields, itemIndex: index };
 };
 
-async function loadResults(options, offset) {
-    const { checker, datasetId, callback, batchSize, limit, badItems, badFields, identificationFields } = options;
-    console.log(`loading setup: batchSize: ${batchSize}, limit left: ${limit - offset} total limit: ${limit}, offset: ${offset}`);
-    const currentLimit = limit < batchSize + offset ? limit - offset : batchSize;
-    console.log(`Loading next batch of ${currentLimit} items`);
-    const newItems = await Apify.client.datasets.getItems({
-        datasetId,
-        offset,
-        limit: currentLimit,
-    }).then((res) => res.items);
+async function loadAndProcessResults(options, offset) {
+    const { checker, datasetId, checkerFn, batchSize, limit, badItems, badFields, identificationFields } = options;
 
-    console.log(`loaded ${newItems.length} items`);
+    while (true) {
+        console.log(`loading setup: batchSize: ${batchSize}, limit left: ${limit - offset} total limit: ${limit}, offset: ${offset}`);
+        const currentLimit = limit < batchSize + offset ? limit - offset : batchSize;
+        console.log(`Loading next batch of ${currentLimit} items`);
+        const newItems = await Apify.client.datasets.getItems({
+            datasetId,
+            offset,
+            limit: currentLimit,
+        }).then((res) => res.items);
 
-    callback(checker, newItems, badItems, badFields, identificationFields);
-    if (offset + batchSize >= limit || newItems.length === 0) {
-        console.log('All items loaded');
-        return;
+        console.log(`loaded ${newItems.length} items`);
+
+        checkerFn(checker, newItems, badItems, badFields, identificationFields);
+        if (offset + batchSize >= limit || newItems.length === 0) {
+            console.log('All items loaded');
+            return;
+        }
+        await Apify.setValue('STATE', { offset, badItems, badFields });
+        offset += batchSize;
     }
-    await Apify.setValue('STATE', { offset, badItems, badFields });
-    await loadResults(options, offset + batchSize);
+    // await loadResults(options, offset + batchSize);
 }
 
 const iterationFn = (checker, items, badItems, badFields, identificationFields, offset = 0) => {
@@ -131,6 +135,7 @@ Apify.main(async () => {
             totalItemCount = datasetInfo.itemCount;
             console.log('Total items in dataset:', totalItemCount);
         } else {
+            console.log('dataset not found, will try KV store');
             if (!recordKey) {
                 throw new Error('Cannot try to load from KV store without a "recordKey" input parameter');
             }
@@ -154,12 +159,12 @@ Apify.main(async () => {
     if (rawData || kvStoreData) {
         iterationFn(checker, rawData || kvStoreData, badItems, badFields, identificationFields);
     } else if (datasetInfo) {
-        await loadResults({
+        await loadAndProcessResults({
             checker,
             datasetId: apifyStorageId,
-            callback: iterationFn,
+            checkerFn: iterationFn,
             batchSize,
-            limit,
+            limit: limit || totalItemCount,
             badItems,
             badFields,
             identificationFields,

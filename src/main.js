@@ -3,27 +3,10 @@ const Apify = require('apify');
 
 // let COPY_MODE;
 
-const trimFields = (item, identificationFields) => {
-    if (identificationFields.length === 0) {
-        return item;
-    }
-    return identificationFields.reduce((newItem, field) => {
-        newItem[field] = item[field];
-        return newItem;
-    }, {});
-};
-
-const getOutputItem = (item, badFields, identificationFields, index) => {
-    const trimmedItem = trimFields(item, identificationFields);
-    const updatedItem = badFields.reduce((updItem, field) => {
-        updItem[field] = item[field];
-        return updItem;
-    }, trimmedItem);
-    return { data: updatedItem, badFields, itemIndex: index };
-};
+const iterationFn = require('./iteration-fn.js');
 
 async function loadAndProcessResults(options, offset) {
-    const { checker, datasetId, checkerFn, batchSize, limit, badItems, badFields, identificationFields } = options;
+    const { checker, datasetId, batchSize, limit, badItems, badFields, identificationFields, noExtraFields } = options;
 
     while (true) {
         console.log(`loading setup: batchSize: ${batchSize}, limit left: ${limit - offset} total limit: ${limit}, offset: ${offset}`);
@@ -37,7 +20,7 @@ async function loadAndProcessResults(options, offset) {
 
         console.log(`loaded ${newItems.length} items`);
 
-        checkerFn(checker, newItems, badItems, badFields, identificationFields);
+        iterationFn({ checker, items: newItems, badItems, badFields, identificationFields, noExtraFields });
         console.dir({ badItemCount: badItems.length, badFields });
         if (offset + batchSize >= limit || newItems.length === 0) {
             console.log('All items loaded');
@@ -48,39 +31,6 @@ async function loadAndProcessResults(options, offset) {
     }
     // await loadResults(options, offset + batchSize);
 }
-
-const iterationFn = (checker, items, badItems, badFields, identificationFields, offset = 0) => {
-    items.forEach((item, index) => {
-        try {
-            const itemBadFields = [];
-            Object.keys(checker).forEach((key) => {
-                const fn = checker[key];
-                const isGood = fn(item[key], item);
-                if (!isGood) {
-                    itemBadFields.push(key);
-                    if (!badFields[key]) badFields[key] = 0;
-                    badFields[key]++;
-                }
-            });
-            Object.keys(item).forEach((key) => {
-                const allowedKeys = Object.keys(checker);
-                if (!allowedKeys.includes(key)) {
-                    itemBadFields.push(key);
-                    if (!badFields[key]) badFields[key] = 0;
-                    badFields[key]++;
-                }
-            });
-            if (itemBadFields.length > 0) {
-                const debugItem = getOutputItem(item, itemBadFields, identificationFields, index + offset);
-                badItems.push(debugItem); // COPY_MODE ? deepcopy(debugItem) : debugItem
-            }
-        } catch (e) {
-            console.log('Checker failed on item, please check your javascript:');
-            console.dir(item);
-            throw new Error('Checker failed with error:', e);
-        }
-    });
-};
 
 Apify.main(async () => {
     const input = await Apify.getInput();
@@ -93,6 +43,7 @@ Apify.main(async () => {
         rawData,
         functionalChecker,
         identificationFields = [],
+        noExtraFields = true,
         limit,
         offset = 0,
         batchSize = 50000,
@@ -158,17 +109,17 @@ Apify.main(async () => {
 
 
     if (rawData || kvStoreData) {
-        iterationFn(checker, rawData || kvStoreData, badItems, badFields, identificationFields);
+        iterationFn({ checker, items: rawData || kvStoreData, badItems, badFields, identificationFields, noExtraFields });
     } else if (datasetInfo) {
         await loadAndProcessResults({
             checker,
             datasetId: apifyStorageId,
-            checkerFn: iterationFn,
             batchSize,
             limit: limit || totalItemCount,
             badItems,
             badFields,
             identificationFields,
+            noExtraFields,
         },
         state ? state.offset : offset);
     }

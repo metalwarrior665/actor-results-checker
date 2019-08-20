@@ -40,6 +40,12 @@
             "editor": "json",
             "example": ["url", "color"]
         },
+        "noExtraFields": {
+            "title": "No extra fields",
+            "type": "boolean",
+            "description": "If checked on, the actor will consider extra fields as bad fields. Uncheck if you don't mind them",
+            "default": true
+        },
         "limit":{
             "title": "Limit",
             "type": "integer",

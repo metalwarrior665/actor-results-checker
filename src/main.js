@@ -36,7 +36,7 @@ async function loadResults(options, offset) {
     console.log(`loaded ${newItems.length} items`);
 
     callback(checker, newItems, badItems, badFields, identificationFields);
-    if (offset + batchSize >= limit) {
+    if (offset + batchSize >= limit || newItems.length === 0) {
         console.log('All items loaded');
         return;
     }

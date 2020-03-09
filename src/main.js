@@ -6,7 +6,7 @@ const Apify = require('apify');
 const iterationFn = require('./iteration-fn.js');
 
 async function loadAndProcessResults(options, offset) {
-    const { checker, datasetId, batchSize, limit, badItems, badFields, identificationFields, noExtraFields } = options;
+    const { checker, datasetId, batchSize, limit, badItems, badFields, fieldCounts, identificationFields, noExtraFields } = options;
 
     while (true) {
         console.log(`loading setup: batchSize: ${batchSize}, limit left: ${limit - offset} total limit: ${limit}, offset: ${offset}`);
@@ -20,13 +20,13 @@ async function loadAndProcessResults(options, offset) {
 
         console.log(`loaded ${newItems.length} items`);
 
-        iterationFn({ checker, items: newItems, badItems, badFields, identificationFields, noExtraFields });
-        console.dir({ badItemCount: badItems.length, badFields });
+        iterationFn({ checker, items: newItems, badItems, badFields, fieldCounts, identificationFields, noExtraFields });
+        console.dir({ badItemCount: badItems.length, badFields, fieldCounts });
         if (offset + batchSize >= limit || newItems.length === 0) {
             console.log('All items loaded');
             return;
         }
-        await Apify.setValue('STATE', { offset, badItems, badFields });
+        await Apify.setValue('STATE', { offset, badItems, badFields, fieldCounts });
         offset += batchSize;
     }
     // await loadResults(options, offset + batchSize);
@@ -76,13 +76,14 @@ Apify.main(async () => {
     const state = await Apify.getValue('STATE');
     const badItems = state ? state.badItems : [];
     const badFields = state ? state.badFields : {};
+    const fieldCounts = state ? state.fieldCounts : {};
 
     let datasetInfo;
     let kvStoreData;
     let totalItemCount;
     if (apifyStorageId) {
         datasetInfo = await Apify.client.datasets.getDataset({ datasetId: apifyStorageId })
-            .catch(() => console.log('Dataset with "apifyStorageId" was not found, we will try kvStore'));
+            .catch((e) => console.log('Dataset with "apifyStorageId" was not found, we will try kvStore', e));
         if (datasetInfo) {
             totalItemCount = datasetInfo.itemCount;
             console.log('Total items in dataset:', totalItemCount);
@@ -109,7 +110,7 @@ Apify.main(async () => {
 
 
     if (rawData || kvStoreData) {
-        iterationFn({ checker, items: rawData || kvStoreData, badItems, badFields, identificationFields, noExtraFields });
+        iterationFn({ checker, items: rawData || kvStoreData, badItems, badFields, fieldCounts, identificationFields, noExtraFields });
     } else if (datasetInfo) {
         await loadAndProcessResults({
             checker,
@@ -117,6 +118,7 @@ Apify.main(async () => {
             batchSize,
             limit: limit || totalItemCount,
             badItems,
+            fieldCounts,
             badFields,
             identificationFields,
             noExtraFields,
@@ -125,7 +127,20 @@ Apify.main(async () => {
     }
 
     console.log(`number of bad items: ${badItems.length}`);
+
+    console.log('Bad fields:');
     console.dir(badFields);
 
-    await Apify.setValue('OUTPUT', { totalItemCount, badItemCount: badItems.length, identificationFields, badFields, badItems });
+    console.log('Total fields count:');
+    console.log(fieldCounts);
+
+
+    await Apify.setValue('OUTPUT', {
+        totalItemCount,
+        badItemCount: badItems.length,
+        identificationFields,
+        badFields,
+        totalFieldCounts: fieldCounts,
+        badItems,
+    });
 });

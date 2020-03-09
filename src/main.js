@@ -20,7 +20,7 @@ async function loadAndProcessResults(options, offset) {
 
         console.log(`loaded ${newItems.length} items`);
 
-        iterationFn({ checker, items: newItems, badItems, badFields, fieldCounts, identificationFields, noExtraFields });
+        iterationFn({ checker, items: newItems, badItems, badFields, fieldCounts, identificationFields, noExtraFields }, offset);
         console.dir({ badItemCount: badItems.length, badFields, fieldCounts });
         if (offset + batchSize >= limit || newItems.length === 0) {
             console.log('All items loaded');

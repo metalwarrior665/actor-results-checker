@@ -10,11 +10,11 @@
 - [Epilogue](#epilogue)
 
 ### Overview
-Results Checker is an [Apify actor](https://apify.com/actors) that helps you find inconsistencies in your output and essentially fix bugs. 
+Results Checker is an [Apify actor](https://apify.com/actors) that helps you find inconsistencies in your output and essentially fix bugs.
 
-- Loads data from Apify [Dataset](https://apify.com/docs/storage#dataset), [Key Value store](https://apify.com/docs/storage#key-value-store) or just as an arbitrary JSON and runs a check on each item. 
+- Loads data from Apify [Dataset](https://apify.com/docs/storage#dataset), [Key Value store](https://apify.com/docs/storage#key-value-store) or just as an arbitrary JSON and runs a check on each item.
 - The check takes seconds to a maximum of a few minutes for larger datasets.
-- Produces a report so you know exactly how many problems are there and which items contained them. 
+- Produces a report so you know exactly how many problems are there and which items contained them.
 - It is very useful to append this actor as a [webhook](https://apify.com/docs/webhooks) and you can easily chain another actor after that to [send an email](https://apify.com/apify/send-mail) or [add a report to your Google Sheets](https://apify.com/lukaskrivka/google-sheets) to name just a few examples. Check [Apify Store](https://apify.com/store) for more.
 
 ### How it works
@@ -116,18 +116,19 @@ sale_price: (sale_price, item) => (typeof sale_price === 'number' || sale_price 
 *To be added in the next version*
 
 ### Reports
-At the end of the actor run, the report is saved to the default Key Value store as an `OUTPUT`. 
+At the end of the actor run, the report is saved to the default Key Value store as an `OUTPUT`.
 
 It contains:
 - `totalItemCount`, `badItemCount`, `identificationFields`
 - `badFields` array that shows how many times each field was bad. This way you instantly see your problematic spots.
-- `badItems` array of all bad items. The `data` diplay their content whole or just with `identificationFields` plus bad fields to shorten the length. Also for each bad item, you will see exactly the `badFields` (that didn't match the predicate or were extra) and `itemIndex` to locate your item in the dataset.
+- `extraFields` array that show how many times an extra field was encountered.
+- `badItems` Link to another record with an array of all bad items. The `data` diplay their content whole or just with `identificationFields` plus bad fields to shorten the length. Also for each bad item, you will see exactly the `badFields` (that didn't match the predicate or were extra) and `itemIndex` to locate your item in the dataset.
 
-```
+```json
 {
   "totalItemCount": 41117,
   "badItemCount": 63,
-  "identificationFields: ["url"],
+  "identificationFields": ["url"],
   "badFields": {
     "sku": 63,
     "price": 63,
@@ -136,22 +137,33 @@ It contains:
     "title": 2,
     "itemId": 2
   },
-  "badItems": [
-    {
-      "data": {
-        "url": "https://en-ae.namshi.com/buy-trendyol-puff-sleeve-sheer-detail-dress-cd1088znaa8k.html"
-      },
-      "badFields": [
-        "sku",
-        "price",
-        "status",
-        "images"
-      ],
-      "itemIndex": 4
-    },
-    ... // other items here
-  ]
+  "extraFields": {
+    "garbage": 1
+  },
+  "badItems": "https://api.apify.com/v2/key-value-stores/defaultKeyValueStoreId/records/BAD-ITEMS?disableRedirect=true"
 }
+```
+Detailed bad items report from the previous link
+```json
+[
+    {
+        "data": {
+            "url": "https://en-ae.namshi.com/buy-trendyol-puff-sleeve-sheer-detail-dress-cd1088znaa8k.html",
+            "garbage": "sfsdfd"
+        },
+        "badFields": [
+            "sku",
+            "price",
+            "status",
+            "images"
+        ],
+        "extraFields": [
+            "garbage"
+        ],
+        "itemIndex": 4
+    },
+... // other items here
+]
 ```
 
 ### Epilogue

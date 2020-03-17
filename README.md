@@ -22,6 +22,7 @@ Results Checker is an [Apify actor](https://apify.com/actors) that helps you fin
 - Loads data in batches into memory (Key Value store or raw data are loaded all at once).
 - Each item in the batch is scanned.
 - Each field is checked with a [predicate](https://www.youtube.com/watch?v=zP6X8QVcHWE). Extra fields are considered bad (the whole item is marked bad).
+- Each field is also checked for truhly value for a separate `totalFieldCounts` report.
 - A [report](#reports) is created from the whole batch.
 - Between each batch, the state of the actor is saved so it doesn't have to repeat itself on restart(migration).
 - In the end, the report from all batches is merged together and saved as `OUTPUT` to the default Key Value store.
@@ -52,7 +53,7 @@ A checker that uses functions allows us to write custom and flexible checks in p
 
 **Very simple:**
 This checker ensures the `url` is in the correct format most of the time. It also allows an optional color field. All other extra fields will be marked bad.
-```
+```javascript
 () => ({
     url: (url) => typeof url === 'string' && url.startsWith('http') && url.length > 10,
     color: (field) => true // optional field
@@ -63,7 +64,7 @@ You can see the name of the parameter doesn't matter as it is just a regular jav
 
 **Medium complexity**
 Checks more fields.
-```
+```javascript
 () => ({
     url: (url) => typeof url === 'string' && url.startsWith('http') && url.length > 10,
     title: (title) => typeof title === 'string' && title.length >= 3,
@@ -74,7 +75,7 @@ Checks more fields.
 ```
 
 **Complex**
-```
+```javascript
 () => ({
     url: (url) => typeof url === 'string' && url.startsWith('http') && url.length > 10 && !url.includes('?'),
     original_url: (original_url, item) => typeof original_url === 'string' && original_url.startsWith('http') && original_url.length >= item.url.length,
@@ -103,10 +104,12 @@ Checks more fields.
 
 Let's look at some advanced checks we did here:
 - You can pass a second parameter `item` to the predicate (checking function) so that you can always have a reference to all other fields. In this case, we first checked that `price` is a number. Then `salePrice` can be either `number` or `null` but cannot equal to `price` so it only shows up if there is a real discount, otherwise, it should stay `null`.
-```
+
+```javascript
 price: (price) => typeof price === 'number',
 sale_price: (sale_price, item) => (typeof sale_price === 'number' || sale_price === null) && sale_price !== item.price,
 ```
+
 - If the predicate always returns `true`, it means this field can have any value, even `undefined` so it can be absent and still pass too.
 
 **Important:** You should always define your predicates in a way that cannot crash. For example `(images) => images[0].includes('http')` has ways to crash. The correct definition is `(images) => Array.isArray(images) && typeof images[0] === 'string' && images[0].includes('http')`. An error occuring in the predicate will crash the whole actor because the check cannot be valid any more. If it happens, the problematic item will be logged so you can correct the check.
@@ -120,8 +123,9 @@ At the end of the actor run, the report is saved to the default Key Value store 
 
 It contains:
 - `totalItemCount`, `badItemCount`, `identificationFields`
-- `badFields` array that shows how many times each field was bad. This way you instantly see your problematic spots.
-- `extraFields` array that show how many times an extra field was encountered.
+- `badFields` Object that shows how many times each field was bad. This way you instantly see your problematic spots.
+- `extraFields` Object that shows how many times an extra field was encountered.
+- `totalFieldCounts` Object that shows how many times a field was seen in the dataset. Field is considered seen if its value is not `null` or `''` (empty string). It is like JS truthy value but considers `0` valid.
 - `badItems` Link to another record with an array of all bad items. The `data` diplay their content whole or just with `identificationFields` plus bad fields to shorten the length. Also for each bad item, you will see exactly the `badFields` (that didn't match the predicate or were extra) and `itemIndex` to locate your item in the dataset.
 
 ```json
@@ -139,6 +143,11 @@ It contains:
   },
   "extraFields": {
     "garbage": 1
+  },
+  "totalFieldCounts": {
+      "url": 41117,
+      "title": 41115,
+      "garbage": 1
   },
   "badItems": "https://api.apify.com/v2/key-value-stores/defaultKeyValueStoreId/records/BAD-ITEMS?disableRedirect=true"
 }

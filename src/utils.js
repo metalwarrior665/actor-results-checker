@@ -8,13 +8,18 @@ const trimFields = (item, identificationFields) => {
     }, {});
 };
 
-const getOutputItem = (item, badFields, identificationFields, index) => {
+const getOutputItem = (item, badFields, extraFields, identificationFields, index) => {
     const trimmedItem = trimFields(item, identificationFields);
-    const updatedItem = badFields.reduce((updItem, field) => {
+    const updatedItem = badFields.concat(extraFields).reduce((updItem, field) => {
         updItem[field] = item[field];
         return updItem;
     }, trimmedItem);
-    return { data: updatedItem, badFields, itemIndex: index };
+    return {
+        data: updatedItem,
+        badFields: badFields.length > 0 ? badFields : undefined,
+        extraFields: extraFields.length > 0 ? extraFields : undefined,
+        itemIndex: index,
+    };
 };
 
 module.exports.getOutputItem = getOutputItem;

@@ -1,9 +1,10 @@
 const { getOutputItem } = require('./utils.js');
 
-module.exports = ({ checker, items, badItems, badFields, fieldCounts, identificationFields, noExtraFields }, offset = 0) => {
+module.exports = ({ checker, items, badItems, badFields, extraFields, fieldCounts, identificationFields, noExtraFields }, offset = 0) => {
     items.forEach((item, index) => {
         try {
             const itemBadFields = [];
+            const itemExtraFields = [];
             Object.keys(checker).forEach((key) => {
                 const fn = checker[key];
                 const isGood = fn(item[key], item);
@@ -19,9 +20,9 @@ module.exports = ({ checker, items, badItems, badFields, fieldCounts, identifica
                 // Checking extra noise fields
                 if (noExtraFields) {
                     if (!allowedKeys.includes(key)) {
-                        itemBadFields.push(key);
-                        if (!badFields[key]) badFields[key] = 0;
-                        badFields[key]++;
+                        itemExtraFields.push(key);
+                        if (!extraFields[key]) extraFields[key] = 0;
+                        extraFields[key]++;
                     }
                 }
                 // We aggregate how many times each field had truthy value
@@ -34,8 +35,8 @@ module.exports = ({ checker, items, badItems, badFields, fieldCounts, identifica
                 }
             });
 
-            if (itemBadFields.length > 0) {
-                const debugItem = getOutputItem(item, itemBadFields, identificationFields, index + offset);
+            if (itemBadFields.length > 0 || itemExtraFields > 0) {
+                const debugItem = getOutputItem(item, itemBadFields, itemExtraFields, identificationFields, index + offset);
                 badItems.push(debugItem); // COPY_MODE ? deepcopy(debugItem) : debugItem
             }
         } catch (e) {

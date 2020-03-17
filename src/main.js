@@ -6,7 +6,7 @@ const Apify = require('apify');
 const iterationFn = require('./iteration-fn.js');
 
 async function loadAndProcessResults(options, offset) {
-    const { checker, datasetId, batchSize, limit, badItems, badFields, fieldCounts, identificationFields, noExtraFields } = options;
+    const { checker, datasetId, batchSize, limit, badItems, badFields, fieldCounts, extraFields, identificationFields, noExtraFields } = options;
 
     while (true) {
         console.log(`loading setup: batchSize: ${batchSize}, limit left: ${limit - offset} total limit: ${limit}, offset: ${offset}`);
@@ -20,13 +20,13 @@ async function loadAndProcessResults(options, offset) {
 
         console.log(`loaded ${newItems.length} items`);
 
-        iterationFn({ checker, items: newItems, badItems, badFields, fieldCounts, identificationFields, noExtraFields }, offset);
+        iterationFn({ checker, items: newItems, badItems, badFields, fieldCounts, extraFields, identificationFields, noExtraFields }, offset);
         console.dir({ badItemCount: badItems.length, badFields, fieldCounts });
         if (offset + batchSize >= limit || newItems.length === 0) {
             console.log('All items loaded');
             return;
         }
-        await Apify.setValue('STATE', { offset, badItems, badFields, fieldCounts });
+        await Apify.setValue('STATE', { offset, badItems, badFields, extraFields, fieldCounts });
         offset += batchSize;
     }
     // await loadResults(options, offset + batchSize);
@@ -76,6 +76,7 @@ Apify.main(async () => {
     const state = await Apify.getValue('STATE');
     const badItems = state ? state.badItems : [];
     const badFields = state ? state.badFields : {};
+    const extraFields = state ? state.extraFields : {};
     const fieldCounts = state ? state.fieldCounts : {};
 
     let datasetInfo;
@@ -110,7 +111,7 @@ Apify.main(async () => {
 
 
     if (rawData || kvStoreData) {
-        iterationFn({ checker, items: rawData || kvStoreData, badItems, badFields, fieldCounts, identificationFields, noExtraFields });
+        iterationFn({ checker, items: rawData || kvStoreData, badItems, badFields, fieldCounts, extraFields, identificationFields, noExtraFields });
     } else if (datasetInfo) {
         await loadAndProcessResults({
             checker,
@@ -120,6 +121,7 @@ Apify.main(async () => {
             badItems,
             fieldCounts,
             badFields,
+            extraFields,
             identificationFields,
             noExtraFields,
         },
@@ -140,7 +142,10 @@ Apify.main(async () => {
         badItemCount: badItems.length,
         identificationFields,
         badFields,
+        extraFields,
         totalFieldCounts: fieldCounts,
-        badItems,
+        badItems: `https://api.apify.com/v2/key-value-stores/${Apify.getEnv().defaultKeyValueStoreId}/records/BAD-ITEMS?disableRedirect=true`,
     });
+
+    await Apify.setValue('BAD-ITEMS', badItems);
 });

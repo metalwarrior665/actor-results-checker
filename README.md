@@ -43,6 +43,7 @@ This actor expects a JSON object as an input. You can also set it up in a visual
 - `recordKey` <[string](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Data_structures#String_type)> Record key from where it loads data in key value store. **Only allowed when `apifyStorageId` points to a key value store**
 - `rawData` <[array](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array)> Array of objects to be checked. **You have specify this or `apifyStorageId` but not both**.
 - `functionalChecker` <[stringified function](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Functions)> Stringified javascipt function returns an object with item fields as keys and values as predicates (functions that return true/false). Check [Function Checker](#functional-checker) section. **Required**
+- `context` <[object](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Data_structures#Objects)> Custom object where you can put any value that will be accessible in functional checker functions as **third** parameter. Useful for dynamic values coming from other actors.
 - `identificationFields` <[array](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array)> Array of fields(strings) that will be shown for the bad items in the OUTPUT report. Useful for identification (usually URL, itemId, color etc.).
 `limit`: <[number](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Data_structures#Number_type)> How many items will be checked. **Default: all**
 `offset`: <[number](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Data_structures#Number_type)> From which item the checking will start. Use with `limit` to check specific items. **Default: 0**
@@ -79,7 +80,7 @@ Checks more fields.
 () => ({
     url: (url) => typeof url === 'string' && url.startsWith('http') && url.length > 10 && !url.includes('?'),
     original_url: (original_url, item) => typeof original_url === 'string' && original_url.startsWith('http') && original_url.length >= item.url.length,
-    categories_json: (categories_json) => Array.isArray(categories_json),
+    categories_json: (categories_json, item, context) => Array.isArray(categories_json) && (context && context.onlyShirts ? categories_json.length === 1 && categories_json[0] === 'shirts' : true),
     title: (title) => typeof title === 'string' && title.length >= 3,
     designer_name: (designer_name) => typeof designer_name === 'string' || designer_name === null,
     manufacturer: (manufacturer) => typeof manufacturer === 'string' && manufacturer.length > 0,
@@ -104,10 +105,12 @@ Checks more fields.
 
 Let's look at some advanced checks we did here:
 - You can pass a second parameter `item` to the predicate (checking function) so that you can always have a reference to all other fields. In this case, we first checked that `price` is a number. Then `salePrice` can be either `number` or `null` but cannot equal to `price` so it only shows up if there is a real discount, otherwise, it should stay `null`.
+- You can pass a third parameter `context` which is any object you passed via actor input. In this case we may pass `context.onlyShirts` which means the checker will check that we got only the `shirts` category and nothing else. If `context.onlyShirts` is not passed, then we just check that `categories_json` is a valid array.
 
 ```javascript
 price: (price) => typeof price === 'number',
 sale_price: (sale_price, item) => (typeof sale_price === 'number' || sale_price === null) && sale_price !== item.price,
+categories_json: (categories_json, item, context) => Array.isArray(categories_json) && (context && context.onlyShirts ? categories_json.length === 1 && categories_json[0] === 'shirts' : true),
 ```
 
 - If the predicate always returns `true`, it means this field can have any value, even `undefined` so it can be absent and still pass too.

@@ -1,13 +1,13 @@
 const { getOutputItem } = require('./utils.js');
 
-module.exports = ({ checker, items, badItems, badFields, extraFields, fieldCounts, identificationFields, noExtraFields }, offset = 0) => {
+module.exports = ({ checker, items, badItems, badFields, extraFields, fieldCounts, identificationFields, noExtraFields, context }, offset = 0) => {
     items.forEach((item, index) => {
         try {
             const itemBadFields = [];
             const itemExtraFields = [];
             Object.keys(checker).forEach((key) => {
                 const fn = checker[key];
-                const isGood = fn(item[key], item);
+                const isGood = fn(item[key], item, context);
                 if (!isGood) {
                     itemBadFields.push(key);
                     if (!badFields[key]) badFields[key] = 0;

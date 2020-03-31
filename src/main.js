@@ -6,7 +6,7 @@ const Apify = require('apify');
 const iterationFn = require('./iteration-fn.js');
 
 async function loadAndProcessResults(options, offset) {
-    const { checker, datasetId, batchSize, limit, badItems, badFields, fieldCounts, extraFields, identificationFields, noExtraFields } = options;
+    const { checker, datasetId, batchSize, limit, badItems, badFields, fieldCounts, extraFields, identificationFields, noExtraFields, context } = options;
 
     while (true) {
         console.log(`loading setup: batchSize: ${batchSize}, limit left: ${limit - offset} total limit: ${limit}, offset: ${offset}`);
@@ -20,7 +20,7 @@ async function loadAndProcessResults(options, offset) {
 
         console.log(`loaded ${newItems.length} items`);
 
-        iterationFn({ checker, items: newItems, badItems, badFields, fieldCounts, extraFields, identificationFields, noExtraFields }, offset);
+        iterationFn({ checker, items: newItems, badItems, badFields, fieldCounts, extraFields, identificationFields, noExtraFields, context }, offset);
         console.dir({ badItemCount: badItems.length, badFields, fieldCounts });
         if (offset + batchSize >= limit || newItems.length === 0) {
             console.log('All items loaded');
@@ -47,6 +47,7 @@ Apify.main(async () => {
         limit,
         offset = 0,
         batchSize = 50000,
+        context, // Can be anything
         // copyMode = false,
     } = input;
 
@@ -111,7 +112,7 @@ Apify.main(async () => {
 
 
     if (rawData || kvStoreData) {
-        iterationFn({ checker, items: rawData || kvStoreData, badItems, badFields, fieldCounts, extraFields, identificationFields, noExtraFields });
+        iterationFn({ checker, items: rawData || kvStoreData, badItems, badFields, fieldCounts, extraFields, identificationFields, noExtraFields, context });
     } else if (datasetInfo) {
         await loadAndProcessResults({
             checker,
@@ -124,6 +125,7 @@ Apify.main(async () => {
             extraFields,
             identificationFields,
             noExtraFields,
+            context,
         },
         state ? state.offset : offset);
     }

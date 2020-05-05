@@ -26,10 +26,9 @@ async function loadAndProcessResults(options, offset) {
             console.log('All items loaded');
             return;
         }
-        await Apify.setValue('STATE', { offset, badItems, badFields, extraFields, fieldCounts });
         offset += batchSize;
+        await Apify.setValue('STATE', { offset, badItems, badFields, extraFields, fieldCounts });
     }
-    // await loadResults(options, offset + batchSize);
 }
 
 Apify.main(async () => {
@@ -139,6 +138,7 @@ Apify.main(async () => {
     console.log(fieldCounts);
 
 
+    console.log('Saving OUTPUT');
     await Apify.setValue('OUTPUT', {
         totalItemCount,
         badItemCount: badItems.length,
@@ -148,6 +148,9 @@ Apify.main(async () => {
         totalFieldCounts: fieldCounts,
         badItems: `https://api.apify.com/v2/key-value-stores/${Apify.getEnv().defaultKeyValueStoreId}/records/BAD-ITEMS?disableRedirect=true`,
     });
+    console.log('OUTPUT saved...');
 
+    console.log('Saving BAD-ITEMS');
     await Apify.setValue('BAD-ITEMS', badItems);
+    console.log('BAD-ITEMS saved...');
 });

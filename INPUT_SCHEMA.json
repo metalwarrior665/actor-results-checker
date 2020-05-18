@@ -47,6 +47,13 @@
             "editor": "json",
             "example": ["url", "color"]
         },
+        "minimalSuccessRate":{
+            "title": "Minimal success rate",
+            "type": "object",
+            "description": "You can specify minimal success rate (0 to 1) of any field. If the success rate will be higher than this, the field will not be count as bad field. This needs t obe an object with fields as keys and success rate as values.",
+            "editor": "json",
+            "example": [{ "url": 0.999, "price": 0.9 }]
+        },
         "noExtraFields": {
             "title": "No extra fields",
             "type": "boolean",

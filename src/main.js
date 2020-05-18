@@ -43,6 +43,7 @@ Apify.main(async () => {
         functionalChecker,
         identificationFields = [],
         noExtraFields = true,
+        minimalSuccessRate = {},
         limit,
         offset = 0,
         batchSize = 50000,
@@ -109,34 +110,43 @@ Apify.main(async () => {
         totalItemCount = rawData.length;
     }
 
+    // Values that are same for dataset and other inputs
+    const iterationContext = { checker, badItems, badFields, fieldCounts, extraFields, identificationFields, noExtraFields, context };
 
     if (rawData || kvStoreData) {
-        iterationFn({ checker, items: rawData || kvStoreData, badItems, badFields, fieldCounts, extraFields, identificationFields, noExtraFields, context });
+        iterationFn({ items: rawData || kvStoreData, ...iterationContext });
     } else if (datasetInfo) {
         await loadAndProcessResults({
-            checker,
             datasetId: apifyStorageId,
             batchSize,
             limit: limit || totalItemCount,
-            badItems,
-            fieldCounts,
-            badFields,
-            extraFields,
-            identificationFields,
-            noExtraFields,
-            context,
+            ...iterationContext,
         },
         state ? state.offset : offset);
     }
 
-    console.log(`number of bad items: ${badItems.length}`);
+    console.log('Bad fields before applying success rate:');
+    console.dir(badFields);
 
-    console.log('Bad fields:');
+    let createBadItemsWithoutSucceeded = false;
+    // Now we update the bad items and bad fields with the successRate "policy"
+    for (const [badField, badValue] of Object.entries(badFields)) {
+        if (minimalSuccessRate[badField]) {
+            const rateOfSuccess = 1 - badValue / totalItemCount;
+            const wasSuccess = rateOfSuccess > minimalSuccessRate[badField];
+            console.log(`${badField} = ${rateOfSuccess}(rateOfSuccess) > ${minimalSuccessRate[badField]}(minimalSuccessRate) => wasSuccess: ${wasSuccess}`)
+            if (wasSuccess) {
+                createBadItemsWithoutSucceeded = true;
+                delete badFields[badField];
+            }
+        }
+    }
+
+    console.log('Bad fields after applying success rate:');
     console.dir(badFields);
 
     console.log('Total fields count:');
     console.log(fieldCounts);
-
 
     console.log('Saving OUTPUT');
     await Apify.setValue('OUTPUT', {
@@ -147,8 +157,26 @@ Apify.main(async () => {
         extraFields,
         totalFieldCounts: fieldCounts,
         badItems: `https://api.apify.com/v2/key-value-stores/${Apify.getEnv().defaultKeyValueStoreId}/records/BAD-ITEMS?disableRedirect=true`,
+        badItemsWithoutSucceeded: createBadItemsWithoutSucceeded
+            ? `https://api.apify.com/v2/key-value-stores/${Apify.getEnv().defaultKeyValueStoreId}/records/BAD-ITEMS-WITHOUT-SUCCEEDED?disableRedirect=true`
+            : undefined,
     });
     console.log('OUTPUT saved...');
+
+    if (createBadItemsWithoutSucceeded) {
+        // If the item has any badFields that was not removed from badFields, we have to keep it
+        const badItemsWithoutSucceeded = badItems.filter((item) => {
+            for (const itemBadField of item.badFields) {
+                if (badFields[itemBadField]) {
+                    return true;
+                }
+            }
+            return false;
+        });
+        console.log('Saving BAD-ITEMS-WITHOUT-SUCCEEDED');
+        await Apify.setValue('BAD-ITEMS-WITHOUT-SUCCEEDED', badItemsWithoutSucceeded);
+        console.log('BAD-ITEMS-WITHOUT-SUCCEEDED saved...');
+    }
 
     console.log('Saving BAD-ITEMS');
     await Apify.setValue('BAD-ITEMS', badItems);

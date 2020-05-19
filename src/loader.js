@@ -27,6 +27,6 @@ module.exports = async (options) => {
             return;
         }
         state.offset += batchSize;
-        await Apify.setValue('STATE', { state });
+        await Apify.setValue('STATE', state);
     }
 }

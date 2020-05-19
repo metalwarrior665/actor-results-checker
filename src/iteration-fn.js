@@ -1,6 +1,24 @@
 const { getOutputItem } = require('./utils.js');
 
-module.exports = ({ checker, items, badItems, badFields, extraFields, fieldCounts, identificationFields, noExtraFields, context }, offset = 0) => {
+module.exports = (iterationContext, offset = 0) => {
+    const {
+        state,
+        checker,
+        items,
+        identificationFields,
+        noExtraFields,
+        maxBadItemsSaved,
+        context,
+    } = iterationContext;
+
+    const {
+        badItems,
+        badFields,
+        extraFields,
+        fieldCounts,
+        badItemsUniqueMarkCount,
+    } = state;
+
     items.forEach((item, index) => {
         try {
             const itemBadFields = [];
@@ -36,8 +54,16 @@ module.exports = ({ checker, items, badItems, badFields, extraFields, fieldCount
             });
 
             if (itemBadFields.length > 0 || itemExtraFields > 0) {
-                const debugItem = getOutputItem(item, itemBadFields, itemExtraFields, identificationFields, index + offset);
-                badItems.push(debugItem); // COPY_MODE ? deepcopy(debugItem) : debugItem
+                // We only push new bad items until we reach maxBadItemsSaved for the particular badFields
+                const badItemUniqueMark = itemBadFields.concat(itemExtraFields).reduce((acc, val) => acc.concat(val), '');
+                if (!badItemsUniqueMarkCount[badItemUniqueMark]) {
+                    badItemsUniqueMarkCount[badItemUniqueMark] = 0;
+                }
+                if (badItemsUniqueMarkCount[badItemUniqueMark] < maxBadItemsSaved) {
+                    const debugItem = getOutputItem(item, itemBadFields, itemExtraFields, identificationFields, index + offset);
+                    badItems.push(debugItem);
+                }
+                badItemsUniqueMarkCount[badItemUniqueMark]++;
             }
         } catch (e) {
             console.log('Checker failed on item, please check your javascript:');

@@ -46,9 +46,10 @@ This actor expects a JSON object as an input. You can also set it up in a visual
 - `context` <[object](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Data_structures#Objects)> Custom object where you can put any value that will be accessible in functional checker functions as **third** parameter. Useful for dynamic values coming from other actors.
 - `identificationFields` <[array](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array)> Array of fields(strings) that will be shown for the bad items in the OUTPUT report. Useful for identification (usually URL, itemId, color etc.).
 - `minimalSuccessRate` \<object\> You can specify minimal success rate (0 to 1) of any field. If the success rate will be higher than this, the field will not be count as bad field. This needs t obe an object with fields as keys and success rate as values. **Default** Empty object (all values should have success rate 1 (100%))
-`limit`: <[number](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Data_structures#Number_type)> How many items will be checked. **Default: all**
-`offset`: <[number](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Data_structures#Number_type)> From which item the checking will start. Use with `limit` to check specific items. **Default: 0**
-`batchSize`: <[number](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Data_structures#Number_type)> You can change number of loaded and processed items in each batch. This is only needed to be changed if you have really huge items. **Default: 50000**
+- `limit`: <[number](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Data_structures#Number_type)> How many items will be checked. **Default: all**
+- `offset`: <[number](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Data_structures#Number_type)> From which item the checking will start. Use with `limit` to check specific items. **Default: 0**
+- `batchSize`: <[number](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Data_structures#Number_type)> You can change the number of loaded and processed items in each batch. This is only needed to be changed if you have really huge items. **Default: 50000**
+- `maxBadItemsSaved`: \<number\> Sets how big report you get for each unique combination of bad fields. Keeping this small and running it again after fixing some is the best approach. It speeds up the actor and reduces memory need.
 
 ### Functional checker
 A checker that uses functions allows us to write custom and flexible checks in plain javascript. Let's look first on some examples of the checker.

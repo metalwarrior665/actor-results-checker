@@ -85,10 +85,14 @@
             "unit": "items",
             "example": 5000
         },
-        "copyMode":{
-            "title": "copy mode (for debug only)",
-            "type": "boolean",
-            "description": "Check if we can remove memory leak."
+        "maxBadItemsSaved": {
+            "title": "Max bad items saved",
+            "type": "integer",
+            "description": "Sets how big report you get for each unique combination of bad fields. Keeping this small and running it again after fixing some is the best approach. It speeds up the actor and reduces memory need.",
+            "default": 20,
+            "minimum": 0,
+            "unit": "items",
+            "example": 100
         }
     }
 }

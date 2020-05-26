@@ -196,7 +196,15 @@ Provide an object to the input with config for the fields that are allowed to ha
 ```
 
 #### Inside functional checker
-You can also define it directly in your checkers which gives you even more flexibility. In that case, you have change the checkers from function to objects that hold these check functions. You can also have more checks for each field. This is example of one field that has 2 checks, one stricter and one general that should be always correct (if you don't provide `minimalSuccessRate`, it has to be always correct).
+You can also define it directly in your checkers which gives you even more flexibility. In that case, you have change the checkers from function to objects that hold these check functions.
+```javascript
+id: {
+    minimalSuccessRate: 0.5,
+    check: (field) => /^\d+$/.test(field)
+}
+```
+
+You can also have more checks for each field. This is example of one field that has 2 checks, one stricter and one general that should be always correct (if you don't provide `minimalSuccessRate`, it has to be always correct).
 ```javascript
 id: {
     any: {

@@ -20,7 +20,7 @@ module.exports = async (options) => {
 
         iterationFn({ items: newItems, ...iterationContext }, state.offset);
         const { badFields, fieldCounts, badItems } = state;
-        console.dir({ badItemCount: badItems.length, badFields, fieldCounts });
+        console.dir({ badItemCount: state.badItemCount, badFields, fieldCounts });
         if (state.offset + batchSize >= limit || newItems.length === 0) {
             console.log('All items loaded');
             return;

@@ -180,6 +180,51 @@ Detailed bad items report from the previous link
 ]
 ```
 
+### Minimal success rate
+Sometimes you know that some items will always fail the check due to external factors (like website being broken). This actor let's you define `minimalSuccessRate` for a field. If that field passes more checks than `minimalSuccessRate`, it will not be present in `badFields` or `badItems` reports.
+
+There are 2 options how to set `minimalSuccessRate`:
+
+#### As input parameter
+Provide an object to the input with config for the fields that are allowed to have some % of fails. All values are between 0 and 1.
+```json
+"minimalSuccessRate": {
+    "url": 0.99,
+    "price": 0.9,
+    "composition": 0.5
+}
+```
+
+#### Inside functional checker
+You can also define it directly in your checkers which gives you even more flexibility. In that case, you have change the checkers from function to objects that hold these check functions. You can also have more checks for each field. This is example of one field that has 2 checks, one stricter and one general that should be always correct (if you don't provide `minimalSuccessRate`, it has to be always correct).
+```javascript
+id: {
+    any: {
+        check: (field) => !!field
+    },
+    exact: {
+        minimalSuccessRate: 0.5,
+        check: (field) => /^\d+$/.test(field)
+    }
+}
+```
+
+The keys `any` and `exact` are completely up to you and are used for identification. The `badFields` then have the same structure as you provide in your checker (instead of just plain number).
+
+```json
+"badFields": {
+    "id": {
+        "any": 43,
+        "exact": 100
+    },
+    "price": 63,
+    "status": 63,
+    "images": 63,
+    "title": 2,
+    "itemId": 2
+  }
+```
+
 ### Epilogue
 If you find any problem or would like to add a new feature, please create an issue on the Github page.
 

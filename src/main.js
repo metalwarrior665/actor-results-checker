@@ -40,12 +40,23 @@ Apify.main(async () => {
         throw new Error('Input has to contain "checkFunctions" object!');
     }
     Object.entries(checker).forEach(([key, value]) => {
-        if (typeof value !== 'function') {
-            throw new Error(`checkFunctions.${key} should be a function! Please correct the input!`);
+        if (typeof value !== 'function' && typeof value !== 'object') {
+            throw new Error(`Checker on key ${key} is type: ${typeof value}. It has to be a function or object. Please correct the input!`);
+        }
+        if (typeof value === 'object') {
+            Object.values(value).forEach((checkObj, i) => {
+                if (typeof checkObj !== 'object') {
+                    throw new Error(`Check object on key ${key} and index ${i} is type: ${typeof checkObj}. It has to be an object. Please correct the input!`);
+                }
+                if (typeof checkObj.check !== 'function') {
+                    throw new Error(`Check object check on key ${key} and index ${i} is type: ${typeof checkObj.check}. It has to be a function. Please correct the input!`);
+                }
+            })
         }
     });
 
     const defaultState = {
+        badItemCount: 0, // We cannot compute that from badItems length because we trim that array to save memory
         badItems: [],
         badFields: {},
         extraFields: {},
@@ -110,16 +121,36 @@ Apify.main(async () => {
 
     console.log('Bad fields before applying success rate:');
     console.dir(state.badFields);
+    // To cut of any references
+    state.badFieldsRaw = JSON.parse(JSON.stringify(state.badFields));
 
     let createBadItemsWithoutSucceeded = false;
     // Now we update the bad items and bad fields with the successRate "policy"
+    // Success rate is either "global" from minimalSuccessRate input
+    // or from functionalChecker in the fields
     for (const [badField, badValue] of Object.entries(state.badFields)) {
-        if (minimalSuccessRate[badField]) {
+        if (minimalSuccessRate[badField] && typeof checker[badField] === 'function') {
             const rateOfSuccess = 1 - badValue / totalItemCount;
             const wasSuccess = rateOfSuccess > minimalSuccessRate[badField];
             console.log(`${badField} = ${rateOfSuccess}(rateOfSuccess) > ${minimalSuccessRate[badField]}(minimalSuccessRate) => wasSuccess: ${wasSuccess}`)
             if (wasSuccess) {
                 createBadItemsWithoutSucceeded = true;
+                delete state.badFields[badField];
+            }
+        } else if (checker[badField] && typeof checker[badField] !== 'function') {
+            for (const [checkName, checkObj] of Object.entries(checker[badField])) {
+                if (!checkObj.minimalSuccessRate) {
+                    continue;
+                }
+                const rateOfSuccess = 1 - badValue[checkName] / totalItemCount;
+                const wasSuccess = rateOfSuccess > checkObj.minimalSuccessRate;
+                console.log(`${badField}.${checkName} = ${rateOfSuccess}(rateOfSuccess) > ${checkObj.minimalSuccessRate}(minimalSuccessRate) => wasSuccess: ${wasSuccess}`)
+                if (wasSuccess) {
+                    createBadItemsWithoutSucceeded = true;
+                    delete state.badFields[badField][checkName];
+                }
+            }
+            if (Object.keys(state.badFields[badField]).length === 0) {
                 delete state.badFields[badField];
             }
         }
@@ -134,7 +165,7 @@ Apify.main(async () => {
     console.log('Saving OUTPUT');
     await Apify.setValue('OUTPUT', {
         totalItemCount,
-        badItemCount: state.badItems.length,
+        badItemCount: state.badItemCount,
         identificationFields,
         badFields: state.badFields,
         extraFields: state.extraFields,

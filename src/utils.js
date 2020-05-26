@@ -23,3 +23,11 @@ const getOutputItem = (item, badFields, extraFields, identificationFields, index
 };
 
 module.exports.getOutputItem = getOutputItem;
+
+module.exports.analyzeCheck = (check) => {
+    const checkIsFunction = typeof check === 'function';
+    const checkIsObject = typeof check === 'object';
+    const checkIsSuccessRateObject = typeof check.check === 'function' && typeof check.minimalSuccessRate === 'number';
+    const checkIsNestedObject = checkIsObject && !checkIsSuccessRateObject;
+    return { checkIsFunction, checkIsObject, checkIsSuccessRateObject, checkIsNestedObject };
+};

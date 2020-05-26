@@ -1,4 +1,4 @@
-const { getOutputItem } = require('./utils.js');
+const { getOutputItem, analyzeCheck } = require('./utils.js');
 
 module.exports = (iterationContext, offset = 0) => {
     const {
@@ -24,17 +24,23 @@ module.exports = (iterationContext, offset = 0) => {
             const itemBadFields = [];
             const itemExtraFields = [];
             Object.keys(checker).forEach((key) => {
-                if (typeof checker[key] === 'function') {
-                    const fn = checker[key];
+                const { checkIsFunction, checkIsObject, checkIsSuccessRateObject, checkIsNestedObject } = analyzeCheck(checker[key]);
+                if (
+                    // Checker value can be a direct check function
+                    checkIsFunction
+                    ||
+                    // Or an object that  can have check function and minimal success rate directly
+                    checkIsSuccessRateObject
+                ) {
+                    const fn = checkIsFunction ? checker[key] : checker[key].check;
                     const isGood = fn(item[key], item, context);
                     if (!isGood) {
                         itemBadFields.push(key);
                         if (!badFields[key]) badFields[key] = 0;
                         badFields[key]++;
                     }
-                } else {
-                    // It is an object of objects with the key being a name
-                    // and value needs to have check function and optionally minSuccessRate (correct type is checked before)
+                } else { // == checkIsNestedObject
+                    // Or it can have more check objects, each with its check function and optional minimal success rate
                     const keyBadFields = {};
                     for (const [checkName, checkObj] of Object.entries(checker[key])) {
                         const fn = checkObj.check;

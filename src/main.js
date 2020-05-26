@@ -2,6 +2,7 @@ const Apify = require('apify');
 
 const iterationFn = require('./iteration-fn.js');
 const loadAndProcessResults = require('./loader.js');
+const { analyzeCheck } = require('./utils.js');
 
 // I know this code is convoluted, refactor would be nice
 Apify.main(async () => {
@@ -44,14 +45,18 @@ Apify.main(async () => {
             throw new Error(`Checker on key ${key} is type: ${typeof value}. It has to be a function or object. Please correct the input!`);
         }
         if (typeof value === 'object') {
-            Object.values(value).forEach((checkObj, i) => {
-                if (typeof checkObj !== 'object') {
-                    throw new Error(`Check object on key ${key} and index ${i} is type: ${typeof checkObj}. It has to be an object. Please correct the input!`);
-                }
-                if (typeof checkObj.check !== 'function') {
-                    throw new Error(`Check object check on key ${key} and index ${i} is type: ${typeof checkObj.check}. It has to be a function. Please correct the input!`);
-                }
-            })
+            if (typeof value.check === 'function' && typeof value.minimalSuccessRate === 'number') {
+                // all good here
+            } else {
+                Object.values(value).forEach((checkObj, i) => {
+                    if (typeof checkObj !== 'object') {
+                        throw new Error(`Check object on key ${key} and index ${i} is type: ${typeof checkObj}. It has to be an object. Please correct the input!`);
+                    }
+                    if (typeof checkObj.check !== 'function') {
+                        throw new Error(`Check object check on key ${key} and index ${i} is type: ${typeof checkObj.check}. It has to be a function. Please correct the input!`);
+                    }
+                })
+            }
         }
     });
 
@@ -128,16 +133,22 @@ Apify.main(async () => {
     // Now we update the bad items and bad fields with the successRate "policy"
     // Success rate is either "global" from minimalSuccessRate input
     // or from functionalChecker in the fields
+    // Check iteration-fn.js to understand different possible checker formats
     for (const [badField, badValue] of Object.entries(state.badFields)) {
-        if (minimalSuccessRate[badField] && typeof checker[badField] === 'function') {
+        const { checkIsFunction, checkIsObject, checkIsSuccessRateObject, checkIsNestedObject } = analyzeCheck(checker[badField]);
+        if (
+            minimalSuccessRate[badField] && checkIsFunction
+            || checkIsObject && checkIsSuccessRateObject
+        ) {
+            const minSuccessRate = checkIsSuccessRateObject ? checker[badField].minimalSuccessRate : minimalSuccessRate[badField];
             const rateOfSuccess = 1 - badValue / totalItemCount;
-            const wasSuccess = rateOfSuccess > minimalSuccessRate[badField];
-            console.log(`${badField} = ${rateOfSuccess}(rateOfSuccess) > ${minimalSuccessRate[badField]}(minimalSuccessRate) => wasSuccess: ${wasSuccess}`)
+            const wasSuccess = rateOfSuccess > minSuccessRate;
+            console.log(`${badField} = ${rateOfSuccess}(rateOfSuccess) > ${minSuccessRate}(minimalSuccessRate) => wasSuccess: ${wasSuccess}`)
             if (wasSuccess) {
                 createBadItemsWithoutSucceeded = true;
                 delete state.badFields[badField];
             }
-        } else if (checker[badField] && typeof checker[badField] !== 'function') {
+        } else if (checkIsNestedObject) {
             for (const [checkName, checkObj] of Object.entries(checker[badField])) {
                 if (!checkObj.minimalSuccessRate) {
                     continue;

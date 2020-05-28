@@ -51,6 +51,9 @@ This actor expects a JSON object as an input. You can also set it up in a visual
 - `batchSize`: <[number](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Data_structures#Number_type)> You can change the number of loaded and processed items in each batch. This is only needed to be changed if you have really huge items. **Default: 50000**
 - `maxBadItemsSaved`: \<number\> Sets how big report you get for each unique combination of bad fields. Keeping this small and running it again after fixing some is the best approach. It speeds up the actor and reduces memory need.
 
+### Reading from webhook
+You can call this actor from Apify webhook without a need to pass to change the webhook payload. The actor will automatically extract the default dataset.
+
 ### Functional checker
 A checker that uses functions allows us to write custom and flexible checks in plain javascript. Let's look first on some examples of the checker.
 

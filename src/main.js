@@ -25,10 +25,16 @@ Apify.main(async () => {
         context, // Can be anything
     } = input;
 
-    if (!apifyStorageId && !rawData) {
+    let storage = apifyStorageId;
+    if (!apifyStorageId && input.resource && input.resource.defaultDatasetId) {
+        console.log('INPUT - Automatically extractig dataset ID from webhook')
+        storage = input.resource.defaultDatasetId;
+    }
+
+    if (!storage && !rawData) {
         throw new Error('Input should contain at least one of: "apifyStorageId" or "rawData"!');
     }
-    if (apifyStorageId && rawData) {
+    if (storage && rawData) {
         throw new Error('Input cannot contain both of: "apifyStorageId" or "rawData"!');
     }
     let checker;
@@ -74,8 +80,8 @@ Apify.main(async () => {
     let datasetInfo;
     let kvStoreData;
     let totalItemCount;
-    if (apifyStorageId) {
-        datasetInfo = await Apify.client.datasets.getDataset({ datasetId: apifyStorageId })
+    if (storage) {
+        datasetInfo = await Apify.client.datasets.getDataset({ datasetId: storage })
             .catch((e) => console.log('Dataset with "apifyStorageId" was not found, we will try kvStore', e));
         if (datasetInfo) {
             totalItemCount = datasetInfo.itemCount;
@@ -85,9 +91,9 @@ Apify.main(async () => {
             if (!recordKey) {
                 throw new Error('Cannot try to load from KV store without a "recordKey" input parameter');
             }
-            kvStoreData = await Apify.client.keyValueStores.getRecord({ storeId: apifyStorageId, key: recordKey })
+            kvStoreData = await Apify.client.keyValueStores.getRecord({ storeId: storage, key: recordKey })
                 .then((res) => res.body)
-                .catch(() => { throw new Error(`Key-value store with "apifyStorageId": "${apifyStorageId}" and "recordKey": "${recordKey}" was not found, please input correct storage ids`); });
+                .catch(() => { throw new Error(`Key-value store with "apifyStorageId": "${storage}" and "recordKey": "${recordKey}" was not found, please input correct storage ids`); });
             if (!Array.isArray(kvStoreData)) {
                 throw new Error('Data loaded from key value store must be an array!');
             }
@@ -115,7 +121,7 @@ Apify.main(async () => {
         iterationFn({ items: rawData || kvStoreData, ...iterationContext });
     } else if (datasetInfo) {
         await loadAndProcessResults({
-            datasetId: apifyStorageId,
+            datasetId: storage,
             batchSize,
             limit: limit || totalItemCount,
             iterationContext,

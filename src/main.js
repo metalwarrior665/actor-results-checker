@@ -39,7 +39,7 @@ Apify.main(async () => {
     }
     let checker;
     try {
-        checker = eval(functionalChecker)();
+        checker = eval(functionalChecker)({ context });
     } catch (e) {
         throw new Error('Creating checker object from "functionalChecker" failed, please nilcude valid javascript! Error:', e);
     }

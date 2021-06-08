@@ -81,7 +81,7 @@ Apify.main(async () => {
     let kvStoreData;
     let totalItemCount;
     if (storage) {
-        datasetInfo = await Apify.client.datasets.getDataset({ datasetId: storage })
+        datasetInfo = await Apify.newClient().dataset(storage).getDataset()
             .catch((e) => console.log('Dataset with "apifyStorageId" was not found, we will try kvStore', e));
         if (datasetInfo) {
             totalItemCount = datasetInfo.itemCount;
@@ -91,7 +91,7 @@ Apify.main(async () => {
             if (!recordKey) {
                 throw new Error('Cannot try to load from KV store without a "recordKey" input parameter');
             }
-            kvStoreData = await Apify.client.keyValueStores.getRecord({ storeId: storage, key: recordKey })
+            kvStoreData = await Apify.newClient().keyValueStore(storage).getRecord(ecordKey)
                 .then((res) => res.body)
                 .catch(() => { throw new Error(`Key-value store with "apifyStorageId": "${storage}" and "recordKey": "${recordKey}" was not found, please input correct storage ids`); });
             if (!Array.isArray(kvStoreData)) {

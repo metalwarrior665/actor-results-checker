@@ -10,7 +10,7 @@ module.exports = async (options) => {
         console.log(`loading setup: batchSize: ${batchSize}, limit left: ${limit - state.offset} total limit: ${limit}, offset: ${state.offset}`);
         const currentLimit = limit < batchSize + state.offset ? limit - state.offset : batchSize;
         console.log(`Loading next batch of ${currentLimit} items`);
-        const newItems = await Apify.newClient().dataset(datasetId).getItems({
+        const newItems = await Apify.newClient().dataset(datasetId).listItems({
             offset: state.offset,
             limit: currentLimit,
             clean: true,

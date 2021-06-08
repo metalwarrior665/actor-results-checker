@@ -81,7 +81,7 @@ Apify.main(async () => {
     let kvStoreData;
     let totalItemCount;
     if (storage) {
-        datasetInfo = await Apify.newClient().dataset(storage).getDataset()
+        datasetInfo = await Apify.newClient().dataset(storage).get()
             .catch((e) => console.log('Dataset with "apifyStorageId" was not found, we will try kvStore', e));
         if (datasetInfo) {
             totalItemCount = datasetInfo.itemCount;

@@ -14,6 +14,7 @@ module.exports = async (options) => {
             datasetId,
             offset: state.offset,
             limit: currentLimit,
+            clean: true,
         }).then((res) => res.items);
 
         console.log(`loaded ${newItems.length} items`);

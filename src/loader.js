@@ -16,9 +16,11 @@ module.exports = async (options) => {
             clean: true,
         }).then((res) => res.items);
 
-        console.log(`loaded ${newItems.length} items`);
+        console.log(`Loaded ${newItems.length} items, starting processing`);
 
         iterationFn({ items: newItems, ...iterationContext }, state.offset);
+
+        console.log(`Batch processed, will load next batch`);
         const { badFields, fieldCounts, badItems } = state;
         console.dir({ badItemCount: state.badItemCount, badFields, fieldCounts });
         if (state.offset + batchSize >= limit || newItems.length === 0) {

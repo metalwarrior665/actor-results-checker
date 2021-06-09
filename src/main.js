@@ -26,7 +26,7 @@ Apify.main(async () => {
     } = input;
 
     let storage = apifyStorageId;
-    if (!apifyStorageId && input.resource && input.resource.defaultDatasetId) {
+    if (input.resource && input.resource.defaultDatasetId) {
         console.log('INPUT - Automatically extractig dataset ID from webhook')
         storage = input.resource.defaultDatasetId;
     }
